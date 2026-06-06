@@ -1,0 +1,14 @@
+openapi: 3.1.0
+info:
+  title: li-books API
+  version: 1.0.0
+paths:
+  /v1/chat/messages:
+    post:
+      summary: Chat turn (SSE)
+  /v1/receipts/parse:
+    post:
+      summary: Parse OCR text with heuristics + law RAG
+  /v1/law/search:
+    post:
+      summary: Law corpus RAG search

@@ -5,7 +5,8 @@
   "type": "module",
   "license": "GPL-3.0-or-later",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./server": "./dist/server.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
