@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { createBooksRouter } from "./server.js";
+import { createBooksRouter, defaultLedger } from "./server.js";
 
 describe("gateway integration pipeline", () => {
   it("parse → law citation → clarification flag", async () => {
@@ -44,6 +44,23 @@ describe("gateway integration pipeline", () => {
     const text = await res.text();
     assert.match(text, /event: message/);
     assert.match(text, /event: done/);
+    server.close();
+  });
+
+  it("bank import and export endpoints", async () => {
+    defaultLedger.accounts.clear();
+    defaultLedger.entries.clear();
+    const router = createBooksRouter();
+    const server = createServer((req, res) => void router(req, res));
+    await new Promise<void>((r) => server.listen(0, r));
+    const port = (server.address() as { port: number }).port;
+    const csv = "Buchungstag;Betrag;Empfaenger;Verwendungszweck\n01.06.2024;-10,00;REWE;Test";
+    const imp = await fetch(`http://127.0.0.1:${port}/v1/bank/import`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ csv }),
+    });
+    assert.equal(imp.status, 200);
     server.close();
   });
 });

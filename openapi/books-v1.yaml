@@ -2,13 +2,65 @@ openapi: 3.1.0
 info:
   title: li-books API
   version: 1.0.0
+  description: Agentic German bookkeeping — chat, parse, ledger, Elster-prep exports
 paths:
   /v1/chat/messages:
     post:
-      summary: Chat turn (SSE)
+      operationId: books_chat_turn
+      summary: Chat turn (SSE stream)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                org_id: { type: string, format: uuid }
+                book_id: { type: string, format: uuid }
   /v1/receipts/parse:
     post:
-      summary: Parse OCR text with heuristics + law RAG
+      operationId: books_submit_document
+      summary: Parse OCR text; may trigger clarification
+  /v1/receipts/post:
+    post:
+      operationId: books_confirm_posting
+      summary: Post receipt to journal after user confirm
+  /v1/clarifications:
+    post:
+      operationId: books_ask_clarification
+      summary: Ask clarification question
+  /v1/clarifications/{id}/answer:
+    post:
+      operationId: books_answer_clarification
+      summary: Answer clarification
   /v1/law/search:
     post:
+      operationId: books_law_search
       summary: Law corpus RAG search
+  /v1/tax/summary:
+    get:
+      operationId: books_tax_summary
+      summary: Period tax rollup (UStVA prep)
+  /v1/bank/import:
+    post:
+      summary: Import bank CSV
+  /v1/export/csv:
+    get:
+      summary: Journal CSV export
+  /v1/export/datev:
+    get:
+      summary: DATEV EXTF export
+  /v1/export/elster/ustva:
+    get:
+      summary: UStVA Elster-prep XML (M1)
+  /v1/export/elster/eur:
+    get:
+      summary: EÜR Elster-prep XML (M1)
+  /v1/onboarding/signup:
+    post:
+      summary: Org + book signup wizard (Stripe stub)
+  /v1/agent/tools:
+    get:
+      summary: List agent tool operationIds

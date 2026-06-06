@@ -1,0 +1,18 @@
+[
+  {
+    "minute_ts": "2024-06-15T14:32:00Z",
+    "realized_pnl_eur": 452.5,
+    "taxable_gain_eur": 450,
+    "estimated_tax_eur": 202.5,
+    "tx_count": 2,
+    "spike_flag": false
+  },
+  {
+    "minute_ts": "2024-06-15T15:00:00Z",
+    "realized_pnl_eur": 572.5,
+    "taxable_gain_eur": 120,
+    "estimated_tax_eur": 54,
+    "tx_count": 1,
+    "spike_flag": false
+  }
+]

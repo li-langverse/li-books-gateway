@@ -38,7 +38,7 @@ export function applyCategorize(input: CategorizeInput): CategorizeResult {
   if (band === "LOW" || (band === "MEDIUM" && !input.hasLawCitation)) {
     return { nextStatus: "needs_clarification", requiresClarification: true, allowPost: false };
   }
-  if (band === "HIGH" && input.hasLawCitation) {
+  if ((band === "MEDIUM" || band === "HIGH") && input.hasLawCitation) {
     return { nextStatus: "ready_to_post", requiresClarification: false, allowPost: false };
   }
   return { nextStatus: "needs_clarification", requiresClarification: true, allowPost: false };

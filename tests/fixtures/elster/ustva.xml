@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Elster xmlns="http://www.elster.de/elsterxml/schema/v11">
+  <TransferHeader>
+    <Verfahren>UStVA</Verfahren>
+    <DatenArt>UStVA</DatenArt>
+    <SteuerNummer>12345678901</SteuerNummer>
+    <Zeitraum>2024-06-01/2024-06-30</Zeitraum>
+  </TransferHeader>
+  <DatenTeil>
+    <Nutzdatenblock>
+      <Umsatzsteuervoranmeldung>
+        <Kz81>0.00</Kz81>
+        <Kz86>0.00</Kz86>
+        <Kz66>100.00</Kz66>
+      </Umsatzsteuervoranmeldung>
+    </Nutzdatenblock>
+  </DatenTeil>
+</Elster>
