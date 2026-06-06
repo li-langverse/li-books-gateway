@@ -6,22 +6,22 @@ import {
   parseOkxWithdrawal,
   syncOkxTrades,
   syncOkxDepositsWithdrawals,
-  okxCredentialsFromEnv,
 } from "../okx.js";
+import { resolveOkxCredentials } from "../../secrets/credentials.js";
 
 export const okxAdapter: CryptoExchangeAdapter = {
   id: "okx",
   enabled: true,
 
   async syncTrades(ctx: AdapterSyncContext): Promise<CryptoTransaction[]> {
-    const creds = okxCredentialsFromEnv();
-    if (!creds) throw new Error("OKX_API_KEY, OKX_API_SECRET, and OKX_PASSPHRASE required");
+    const creds = await resolveOkxCredentials(ctx);
+    if (!creds) throw new Error("OKX credentials required (Settings → Secrets or OKX_* env)");
     return syncOkxTrades(creds, ctx.tax_year, ctx.fetchFn);
   },
 
   async syncDepositsWithdrawals(ctx: AdapterSyncContext): Promise<CryptoTransaction[]> {
-    const creds = okxCredentialsFromEnv();
-    if (!creds) throw new Error("OKX_API_KEY, OKX_API_SECRET, and OKX_PASSPHRASE required");
+    const creds = await resolveOkxCredentials(ctx);
+    if (!creds) throw new Error("OKX credentials required (Settings → Secrets or OKX_* env)");
     return syncOkxDepositsWithdrawals(creds, ctx.tax_year, ctx.fetchFn);
   },
 

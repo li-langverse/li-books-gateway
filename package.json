@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test dist/**/*.test.js"
+    "test": "npm run build && node --test dist/**/*.test.js",
+    "crypto-market-backfill": "npm run build && node dist/crypto/market-backfill.js"
   },
   "engines": {
     "node": ">=22"
@@ -19,6 +20,8 @@
     "@li-langverse/li-books-law-ingest": "file:../li-books-law-ingest"
   },
   "devDependencies": {
+    "@li-langverse/li-auth-jwt": "file:../li-auth-jwt",
+    "@li-langverse/li-books-secrets-api": "file:../li-books-secrets-api",
     "@types/node": "^22.10.0",
     "typescript": "^5.7.0"
   }

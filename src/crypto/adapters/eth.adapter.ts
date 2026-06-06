@@ -1,5 +1,6 @@
 import type { CryptoWalletAdapter, AdapterSyncContext } from "./types.js";
 import type { CryptoTransaction } from "../types.js";
+import { resolveEthWalletAddress } from "../../secrets/credentials.js";
 
 /** MVP: ETH mainnet wallet sync stub — RPC integration in follow-up WP. */
 export const ethWalletAdapter: CryptoWalletAdapter = {
@@ -8,7 +9,7 @@ export const ethWalletAdapter: CryptoWalletAdapter = {
   enabled: true,
 
   async syncAddress(ctx: AdapterSyncContext): Promise<CryptoTransaction[]> {
-    const address = ctx.wallet_address?.trim() || process.env.CRYPTO_WALLET_ETH?.trim();
+    const address = await resolveEthWalletAddress(ctx, ctx.wallet_address);
     if (!address) return [];
     void ctx.tax_year;
     // Live RPC parsing wired via ETH_RPC_URL in a future wallet module.

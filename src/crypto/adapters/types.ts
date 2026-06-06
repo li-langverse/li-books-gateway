@@ -8,7 +8,12 @@ export type AdapterSyncContext = {
   fetchFn?: FetchFn;
   csv?: string;
   wallet_address?: string;
+  /** Authenticated klaut.pro user — secrets resolved from secret/tenants/{user_id}/ */
+  user_id?: string;
+  user_jwt?: string;
   org_id?: string;
+  /** Incremental sync — fetch only rows after this ISO timestamp when supported. */
+  since?: string;
 };
 
 export interface CryptoExchangeAdapter {

@@ -1,4 +1,5 @@
 import type { CryptoTransaction, CryptoTaxMinute, TaxDomain } from "./types.js";
+import type { FifoTxResult } from "./fifo-engine.js";
 
 /** §23 ESt private sales (1-year holding); staking as income. Simplified v1 rates. */
 const ESTG23_RATE = 0.45;
@@ -14,17 +15,23 @@ export function estimateTaxEur(taxable_gain_eur: number, tx_type: CryptoTransact
 export function buildMinuteTimeline(
   txs: CryptoTransaction[],
   tax_year: number,
-  domain: TaxDomain = "freelance"
+  domain: TaxDomain = "freelance",
+  fifoResults?: FifoTxResult[]
 ): CryptoTaxMinute[] {
+  const fifoByTxId = new Map(fifoResults?.map((r) => [r.tx.id, r]) ?? []);
   const byMinute = new Map<string, CryptoTaxMinute>();
   let cumulativePnl = 0;
 
   for (const tx of txs) {
     if (!tx.occurred_at.startsWith(String(tax_year))) continue;
     const minute = tx.occurred_at.slice(0, 16) + ":00Z";
-    const pnl = tx.fiat_amount_eur ?? 0;
+    const fifo = fifoByTxId.get(tx.id);
+    const pnl = fifo?.realized_pnl_eur ?? tx.fiat_amount_eur ?? 0;
     cumulativePnl += pnl;
-    const taxable = tx.tx_type === "sell" || tx.tx_type === "staking_reward" ? Math.max(0, pnl) : 0;
+    const taxable =
+      tx.tx_type === "sell" || tx.tx_type === "swap" || tx.tx_type === "staking_reward"
+        ? Math.max(0, pnl)
+        : 0;
     const prev = byMinute.get(minute) ?? {
       minute_ts: minute,
       realized_pnl_eur: 0,

@@ -285,8 +285,14 @@ export function createBooksRouter() {
         csv?: string;
         wallet_address?: string;
       }>(req);
+      const user_id =
+        typeof req.headers["x-books-user-id"] === "string"
+          ? req.headers["x-books-user-id"]
+          : undefined;
+      const user_jwt =
+        typeof req.headers.authorization === "string" ? req.headers.authorization : undefined;
       try {
-        const result = await syncCrypto(body);
+        const result = await syncCrypto({ ...body, user_id, user_jwt });
         if (result.invalid?.length) {
           json(res, 400, {
             error: "INVALID_SYNC_SOURCES",

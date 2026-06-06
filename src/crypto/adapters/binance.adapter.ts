@@ -6,22 +6,22 @@ import {
   parseBinanceWithdrawal,
   syncBinanceTrades,
   syncBinanceDepositsWithdrawals,
-  binanceCredentialsFromEnv,
 } from "../binance.js";
+import { resolveBinanceCredentials } from "../../secrets/credentials.js";
 
 export const binanceAdapter: CryptoExchangeAdapter = {
   id: "binance",
   enabled: true,
 
   async syncTrades(ctx: AdapterSyncContext): Promise<CryptoTransaction[]> {
-    const creds = binanceCredentialsFromEnv();
-    if (!creds) throw new Error("BINANCE_API_KEY and BINANCE_API_SECRET required");
+    const creds = await resolveBinanceCredentials(ctx);
+    if (!creds) throw new Error("Binance credentials required (Settings → Secrets or BINANCE_* env)");
     return syncBinanceTrades(creds, ctx.tax_year, ctx.fetchFn);
   },
 
   async syncDepositsWithdrawals(ctx: AdapterSyncContext): Promise<CryptoTransaction[]> {
-    const creds = binanceCredentialsFromEnv();
-    if (!creds) throw new Error("BINANCE_API_KEY and BINANCE_API_SECRET required");
+    const creds = await resolveBinanceCredentials(ctx);
+    if (!creds) throw new Error("Binance credentials required (Settings → Secrets or BINANCE_* env)");
     return syncBinanceDepositsWithdrawals(creds, ctx.tax_year, ctx.fetchFn);
   },
 
