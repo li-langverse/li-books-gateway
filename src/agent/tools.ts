@@ -104,12 +104,17 @@ export function booksExportElsterEur(ctx: AgentContext, period_start: string, pe
   const xml = generateEurXml(ctx.ledger, ctx.book_id, period_start, period_end);
   return { xml, validation: validateElsterXml(xml), tax_year: ctx.tax_year };
 }
-export function booksCryptoSync(ctx: AgentContext, input: { source: "csv" | "kraken" | "binance" | "eth_wallet"; csv?: string }) {
+export async function booksCryptoSync(
+  ctx: AgentContext,
+  input: { source?: string; sources?: string[]; csv?: string; wallet_address?: string }
+) {
   return syncCrypto({
     book_id: ctx.book_id,
     tax_year: ctx.tax_year,
     source: input.source,
+    sources: input.sources,
     csv: input.csv,
+    wallet_address: input.wallet_address,
   });
 }
 

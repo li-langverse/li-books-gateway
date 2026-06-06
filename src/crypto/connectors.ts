@@ -1,72 +1,104 @@
-import type { CryptoTransaction } from "./types.js";
+import type { CryptoTransaction, CryptoSyncSource } from "./types.js";
+import { parseExchangeCsv } from "./csv.js";
+import { defaultCryptoStore, type CryptoStore } from "./store.js";
+import {
+  defaultAdapterRegistry,
+  type CryptoAdapterRegistry,
+} from "./adapters/registry.js";
+import type { AdapterSyncContext } from "./adapters/types.js";
+
+export type { CryptoSyncSource } from "./types.js";
+export { defaultAdapterRegistry, CryptoAdapterRegistry } from "./adapters/registry.js";
+export type { CryptoExchangeAdapter, CryptoWalletAdapter } from "./adapters/types.js";
+
 export type CryptoSyncInput = {
   book_id: string;
   tax_year: number;
-  source: "csv" | "kraken" | "binance" | "eth_wallet";
+  /** Single source (legacy) */
+  source?: CryptoSyncSource | string;
+  /** Multiple sources (preferred) — validated against adapter registry */
+  sources?: string[];
   csv?: string;
   wallet_address?: string;
   exchange_account_id?: string;
+  org_id?: string;
 };
 
 export type CryptoSyncResult = {
   imported: number;
   needs_clarification: number;
-  source: string;
+  sources: string[];
+  unavailable?: string[];
+  invalid?: string[];
 };
 
-/** Kraken/Binance trade CSV columns (minimal v1) */
-export function parseExchangeCsv(csv: string, tax_year: number): CryptoTransaction[] {
-  const lines = csv.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  const header = lines[0]!.toLowerCase();
-  const txs: CryptoTransaction[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i]!.split(",");
-    if (header.includes("time") && header.includes("type")) {
-      const timeIdx = header.split(",").indexOf("time");
-      const typeIdx = header.split(",").indexOf("type");
-      const assetIdx = header.split(",").indexOf("asset");
-      const amountIdx = header.split(",").indexOf("amount");
-      const eurIdx = header.split(",").indexOf("eur");
-      const occurred_at = cols[timeIdx] ?? `${tax_year}-01-01T00:00:00Z`;
-      const tx_type = mapExchangeType(cols[typeIdx] ?? "unknown");
-      txs.push({
-        id: `csv-${i}`,
-        occurred_at,
-        asset: cols[assetIdx] ?? "BTC",
-        quantity: parseFloat(cols[amountIdx] ?? "0"),
-        fiat_amount_eur: eurIdx >= 0 ? parseFloat(cols[eurIdx] ?? "0") : null,
-        tx_type,
-        needs_clarification: tx_type === "unknown",
-        source_type: "csv",
-      });
-    }
-  }
-  return txs;
-}
+export { parseExchangeCsv } from "./csv.js";
 
-function mapExchangeType(raw: string): CryptoTransaction["tx_type"] {
-  const t = raw.toLowerCase();
-  if (t.includes("buy")) return "buy";
-  if (t.includes("sell")) return "sell";
-  if (t.includes("stake") || t.includes("reward")) return "staking_reward";
-  if (t.includes("fee")) return "fee";
-  return "unknown";
-}
-
-/** ETH wallet stub — returns empty unless address provided (RPC wired in WP-240) */
-export async function syncEthWallet(_address: string, tax_year: number): Promise<CryptoTransaction[]> {
+function resolveSources(input: CryptoSyncInput): string[] {
+  if (input.sources?.length) return input.sources;
+  if (input.source) return [input.source];
   return [];
 }
 
-export function syncCrypto(input: CryptoSyncInput): CryptoSyncResult {
-  if (input.source === "csv" && input.csv) {
-    const txs = parseExchangeCsv(input.csv, input.tax_year);
+function toAdapterContext(input: CryptoSyncInput, fetchFn?: typeof globalThis.fetch): AdapterSyncContext {
+  return {
+    book_id: input.book_id,
+    tax_year: input.tax_year,
+    fetchFn,
+    csv: input.csv,
+    wallet_address: input.wallet_address,
+    org_id: input.org_id,
+  };
+}
+
+export async function syncCrypto(
+  input: CryptoSyncInput,
+  store: CryptoStore = defaultCryptoStore,
+  registry: CryptoAdapterRegistry = defaultAdapterRegistry,
+  fetchFn?: typeof globalThis.fetch
+): Promise<CryptoSyncResult> {
+  const requested = resolveSources(input);
+  if (!requested.length) {
+    return { imported: 0, needs_clarification: 0, sources: [] };
+  }
+
+  const { valid, invalid, unavailable } = registry.validateSources(requested);
+  if (invalid.length) {
     return {
-      imported: txs.length,
-      needs_clarification: txs.filter((t) => t.needs_clarification).length,
-      source: "csv",
+      imported: 0,
+      needs_clarification: 0,
+      sources: [],
+      invalid,
+      unavailable,
     };
   }
-  return { imported: 0, needs_clarification: 0, source: input.source };
+  if (!valid.length) {
+    return {
+      imported: 0,
+      needs_clarification: 0,
+      sources: [],
+      unavailable,
+    };
+  }
+
+  const ctx = toAdapterContext(input, fetchFn);
+  const allTxs: CryptoTransaction[] = [];
+  const synced: string[] = [];
+
+  for (const sourceId of valid) {
+    if (sourceId === "eth_wallet" && input.wallet_address && input.book_id) {
+      store.registerWallet(input.book_id, input.wallet_address);
+    }
+    const { txs, source } = await registry.syncSource(sourceId, ctx, input.csv);
+    allTxs.push(...txs);
+    synced.push(source);
+  }
+
+  const stored = store.importMany(input.book_id, allTxs);
+  return {
+    imported: stored.length,
+    needs_clarification: stored.filter((t) => t.needs_clarification).length,
+    sources: synced,
+    ...(unavailable.length ? { unavailable } : {}),
+  };
 }

@@ -22,9 +22,9 @@ import {
   requireBookYearUnlocked,
   resolveTaxYear,
 } from "./billing/entitlements.js";
-import { syncCrypto } from "./crypto/connectors.js";
-import { buildMinuteTimeline, explainMinuteSpike } from "./crypto/tax-engine.js";
-import { parseExchangeCsv } from "./crypto/connectors.js";
+import { syncCrypto, parseExchangeCsv, defaultAdapterRegistry } from "./crypto/connectors.js";
+import { defaultCryptoStore } from "./crypto/store.js";
+import { buildMinuteTimeline } from "./crypto/tax-engine.js";
 import { randomUUID } from "node:crypto";
 
 export const defaultLedger = new LedgerStore();
@@ -271,24 +271,60 @@ export function createBooksRouter() {
       return;
     }
 
+    if (url.pathname === "/v1/crypto/sources" && req.method === "GET") {
+      json(res, 200, { sources: defaultAdapterRegistry.listSources() });
+      return;
+    }
+
     if (url.pathname === "/v1/crypto/sync" && req.method === "POST") {
       const body = await readJson<{
         book_id: string;
         tax_year: number;
-        source: "csv" | "kraken" | "binance" | "eth_wallet";
+        source?: string;
+        sources?: string[];
         csv?: string;
         wallet_address?: string;
       }>(req);
-      json(res, 200, syncCrypto(body));
+      try {
+        const result = await syncCrypto(body);
+        if (result.invalid?.length) {
+          json(res, 400, {
+            error: "INVALID_SYNC_SOURCES",
+            invalid: result.invalid,
+            unavailable: result.unavailable,
+            registered: defaultAdapterRegistry.enabledSourceIds(),
+          });
+          return;
+        }
+        if (!result.sources.length && result.unavailable?.length) {
+          json(res, 501, {
+            error: "SYNC_SOURCE_UNAVAILABLE",
+            unavailable: result.unavailable,
+            registered: defaultAdapterRegistry.listSources(),
+          });
+          return;
+        }
+        json(res, 200, result);
+      } catch (err) {
+        json(res, 502, { error: err instanceof Error ? err.message : "sync_failed" });
+      }
       return;
     }
 
     if (url.pathname === "/v1/crypto/timeline" && req.method === "GET") {
       const tax_year = parseInt(url.searchParams.get("tax_year") ?? "2024", 10);
-      const csv = url.searchParams.get("fixture") === "1"
-        ? "time,type,asset,amount,eur\n2024-06-15T14:32:00Z,sell,BTC,-0.01,450.00"
-        : "";
-      const txs = csv ? parseExchangeCsv(csv, tax_year) : [];
+      const book_id = url.searchParams.get("book_id") ?? "00000000-0000-0000-0000-000000000002";
+      const from = url.searchParams.get("from");
+      const to = url.searchParams.get("to");
+      let txs = defaultCryptoStore.listByBookYear(book_id, tax_year);
+      if (url.searchParams.get("fixture") === "1") {
+        txs = parseExchangeCsv(
+          "time,type,asset,amount,eur\n2024-06-15T14:32:00Z,sell,BTC,-0.01,450.00",
+          tax_year
+        );
+      }
+      if (from) txs = txs.filter((t) => t.occurred_at >= from);
+      if (to) txs = txs.filter((t) => t.occurred_at <= to);
       const ctx = agentCtx({
         book_id: url.searchParams.get("book_id") ?? undefined,
         tax_year,

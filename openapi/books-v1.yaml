@@ -64,3 +64,40 @@ paths:
   /v1/agent/tools:
     get:
       summary: List agent tool operationIds
+  /v1/crypto/sources:
+    get:
+      summary: List registered crypto sync adapters (enabled + planned)
+  /v1/crypto/sync:
+    post:
+      operationId: books_crypto_sync
+      summary: Sync crypto transactions from registered sources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [book_id, tax_year]
+              properties:
+                book_id: { type: string, format: uuid }
+                tax_year: { type: integer }
+                sources:
+                  type: array
+                  items:
+                    type: string
+                    enum: [csv, binance, okx, eth_wallet, kraken, coinbase, bybit]
+                  description: MVP enabled — binance, okx, csv, eth_wallet. kraken/coinbase/bybit are planned stubs.
+                source:
+                  type: string
+                  description: Legacy single source (same enum as sources[])
+                csv: { type: string, description: Required when sources includes csv }
+                wallet_address: { type: string, description: ETH address when sources includes eth_wallet }
+  /v1/crypto/timeline:
+    get:
+      operationId: books_crypto_tax_timeline
+      summary: Minute-granularity crypto tax timeline (requires year unlock)
+      parameters:
+        - { name: book_id, in: query, required: true, schema: { type: string, format: uuid } }
+        - { name: tax_year, in: query, required: true, schema: { type: integer } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
