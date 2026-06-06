@@ -1,0 +1,21 @@
+{
+  "name": "@li-langverse/li-books-gateway",
+  "version": "0.1.0",
+  "description": "li-books gateway — chat API, parse pipeline, law RAG, clarification FSM",
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/**/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
